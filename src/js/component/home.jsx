@@ -1,4 +1,4 @@
-import React , {useState} from "react";
+import React , {useEffect, useState } from "react";
 
 
 
@@ -6,8 +6,8 @@ import React , {useState} from "react";
 const Home = () => {
 
 	const [tarea, setTarea]= useState({
-		task:"", 
-		isDone:false
+		label:"", 
+		done:false
 	})
 
 	const [listaTareas, setListaTareas] = useState([])
@@ -15,26 +15,96 @@ const Home = () => {
 	const handleChange = (event) =>{
 		setTarea({...tarea,[event.target.name]:event.target.value})
 	}
+    
 
-	const guardarTarea =(event)=>{
-		if (event.key === "Enter"){
-			if(tarea.task.trim() !== ""){
-				setListaTareas([...listaTareas,tarea])
-				setTarea({
-					task:"",
-					isDone: false
+	let sofia = "https://assets.breatheco.de/apis/fake/todos/user/sofia"
+
+
+ 	const createUser = async () => {
+		try {
+			let response = await fetch(`${sofia}`)
+			if (response.ok){
+				let data = await response.json()
+					if (response.status !== 404) {
+					setListaTareas(data)
+
+			}} else {
+				let responseTodos = await fetch(`${sofia}`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([])
+
 				})
-			}else{
-				alert("Debes escribir una tarea")
+
+
+				if (responseTodos.ok) {
+					createUser()
+				}
+			}
+
+		} catch (error) {
+			console.log(`Explote : ${error}`)
+
+		}
+ 	}
+	
+ 
+	
+
+
+
+	useEffect(()=>{
+		createUser()
+	},[])
+
+
+
+	const guardarTarea =async (event)=> {
+		if (event.key === "Enter"){
+			if (tarea.label.trim() !== ""){
+				try {
+					let response =await fetch (`${sofia}` ,{
+						method : "PUT",
+						headers: {"Content-Type": "application/json"},
+						body: JSON.stringify([...listaTareas, tarea])
+					})
+					if (response.ok){
+						setTarea({label:"", done: false})
+						createUser()
+
+					}
+
+				} catch (error){
+					console.log(error)
+				}
 			}
 		}
 	}
 
-	const borrar =(id)=>{
+
+
+
+
+	const borrar = async (id)=>{
 		let nuevaLista= listaTareas.filter((item,index)=>{
-			return(id !== index)
+			if(id != index){
+				return item
+			}
+			
 		})
-		setListaTareas(nuevaLista)
+		
+		try{ 
+			let response =await fetch (`${sofia}`,
+			{
+				method:"PUT",
+				headers:{ "Content-Type":"application/json"},
+				body: JSON.stringify(nuevaLista)
+			})
+			if(response.ok){
+				createUser()
+			}
+
+		}catch (error){}
 	}
 
 
@@ -54,8 +124,8 @@ const Home = () => {
 						className="dato"
 						onChange={handleChange}
 						onKeyDown={guardarTarea}
-						value={tarea.task}
-						name="task"/>
+						value={tarea.label}
+						name="label"/>
 				</div>
 			</div>
 			<div className="row">
@@ -64,7 +134,7 @@ const Home = () => {
 						{
 							listaTareas.map((item,index)=>{
 								return(
-									<li key={index} onClick={()=>borrar(index)} >{item.task}</li>
+									<li key={index} onClick={()=>borrar(index)} >{item.label}</li>
 								)
 							})
 						}
